@@ -1,71 +1,69 @@
-const fs = require('fs');
-const util = require('util');
-const inquirer = require('inquirer');
+const fs = require("fs");
+const path = require("path");
+const inquirer = require("inquirer");
+const api = require("./utils/api");
+const generateMarkdown = require("./utils/generateMarkdown");
 
-const writeFileAsync = util.promisify(fs.writeFile);
+const questions = [
+  {
+    type: "input",
+    name: "github",
+    message: "What is your GitHub username?"
+  },
+  {
+    type: "input",
+    name: "title",
+    message: "What is your project's name?"
+  },
+  {
+    type: "input",
+    name: "description",
+    message: "Please write a short description of your project"
+  },
+  {
+    type: "list",
+    name: "license",
+    message: "What kind of license should your project have?",
+    choices: ["MIT", "APACHE 2.0", "GPL 3.0", "BSD 3", "None"]
+  },
+  {
+    type: "input",
+    name: "installation",
+    message: "What command should be run to install dependencies?",
+    default: "npm i"
+  },
+  {
+    type: "input",
+    name: "test",
+    message: "What command should be run to run tests?",
+    default: "npm test"
+  },
+  {
+    type: "input",
+    name: "usage",
+    message: "What does the user need to know about using the repo?",
+  },
+  {
+    type: "input",
+    name: "contributing",
+    message: "What does the user need to know about contributing to the repo?",
+  }
+];
 
-// creating a fuction to call to prompt the user
-let promptUser = () => {
-    // whenever we want to get back data from a function, we need to return it.
-   return inquirer.prompt([
-        {
-            type: "input",
-            name: "name",
-            message: "What is your name?"
-        },
-        {
-            type: "input",
-            name: "location",
-            message: "where do you live?"
-        },
-        {
-            type: "input",
-            name: "bio",
-            message: "Tell me about yourself?"
-        },
-        {
-            type: "input",
-            name: "linkedin",
-            message: "Give me your linkedin"
-        },
-        {
-            type: "input",
-            name: "github",
-            message: "What is your github?"
-        },
-    ]);
-};
-
-const generateHtml = (answers) => {
-    return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="X-UA-Compatible" content="ie=edge">
-        <title>Document</title>
-    </head>
-    <body>
-        <p>${answers.name}</p>
-        <p>${answers.location}</p>
-        <p>${answers.bio}</p>
-        <p>${answers.linkedin}</p>
-        <p>${answers.github}</p>
-    </body>
-    </html>`;
+function writeToFile(fileName, data) {
+  return fs.writeFileSync(path.join(process.cwd(), fileName), data);
 }
-// promptUser();
 
-async function init() {
-    try {
-        const answers = await promptUser();
-        const html = generateHtml(answers);
-        await writeFileAsync("bio.html", html);
-        console.log("Success");
+function init() {
+  inquirer.prompt(questions).then((inquirerResponses) => {
+    console.log("Searching...");
 
-    } catch (err) {
-        console.log(err);
-    }
+    api
+      .getUser(inquirerResponses.github)
+      .then(({ data }) => {
+        writeToFile("README.md", generateMarkdown({ ...inquirerResponses, ...data }));
+      })
+  })
 }
 
 init();
